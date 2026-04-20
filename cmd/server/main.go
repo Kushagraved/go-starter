@@ -1,7 +1,6 @@
 package main
 
 import (
-	"context"
 	"flag"
 	"fmt"
 	"log"
@@ -43,33 +42,20 @@ func main() {
 	}
 
 	// ── Queue ─────────────────────────────────────────────────────────────────
-	// driver="memory" → in-process channels; swap for SQS client when needed.
-	var queueDriver string
-	if cfg.Settings.Queue.Driver != "" {
-		queueDriver = cfg.Settings.Queue.Driver
-	} else {
-		queueDriver = "memory"
-	}
-	var producer infraQueue.Producer
-	if queueDriver == "memory" {
-		mq := infraQueue.NewMemoryQueue(256)
-		producer = mq
-		// wire consumers
-		ctx := context.Background()
-		_ = mq.Subscribe(ctx, "task_events", func(_ context.Context, msg infraQueue.Message) error {
-			appLogger.Info(ctx, "queue", "task_events", "received event",
-				logger.String("payload", string(msg.Payload)))
-			return nil
-		})
-	}
-	_ = producer // available for injection into services that need to publish events
+	// driver="memory" → in-process channels; swap for SQS without touching anything else.
+	mq := buildQueue(cfg.Settings.Queue.Driver, appLogger)
 
 	// ── Storage ───────────────────────────────────────────────────────────────
-	// local disk in dev; swap for S3 implementation in prod.
 	_ = infraStorage.NewLocal("./tmp/uploads")
 
 	// ── Services ──────────────────────────────────────────────────────────────
-	taskService := task.NewService(repo)
+	// Each service receives the producer so it can emit events,
+	// and implements queue.Consumer so it can process events it subscribes to.
+	taskService := task.NewService(repo, mq, appLogger)
+
+	// ── Start consumers ───────────────────────────────────────────────────────
+	// The service itself is the consumer — no separate handler wiring needed.
+	mq.StartConsumer(taskService, 5)
 
 	// ── Controller ────────────────────────────────────────────────────────────
 	srv := controller.New(controller.Services{
@@ -87,6 +73,20 @@ func main() {
 	if err := r.Run(":" + port); err != nil {
 		log.Fatalf("server error: %v", err)
 	}
+}
+
+// buildQueue returns a queue that implements both ListenToEvents and PushEvents.
+// Swap "memory" for an SQS/Kafka implementation without touching anything else.
+func buildQueue(driver string, log logger.Logger) interface {
+	infraQueue.ListenToEvents
+	infraQueue.PushEvents
+} {
+	switch driver {
+	case "sqs":
+		// TODO: return sqsQueue.New(cfg)
+		panic("SQS queue driver not yet implemented")
+	}
+	return infraQueue.NewMemoryQueue(256, log)
 }
 
 func buildDSN(db config.DBSettings) string {
