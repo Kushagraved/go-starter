@@ -1,0 +1,36 @@
+settings:
+  env: "dev"
+  server:
+    port: "8080"
+
+  logger:
+    level: "debug"
+
+  # Set db_driver to "memory" for in-memory SQLite-like store, or "postgres" for real Postgres
+  db_driver: "memory"
+
+  sql:
+    primary:
+      host: "postgres"
+      port: 5432
+      db_name: "go_starter"
+      user: "postgres"
+      password: "postgres"
+      max_open_connections: 10
+      max_idle_connections: 5
+
+  redis:
+    host: "redis:6379"
+    password: ""
+    db: 0
+    dial_timeout: 5
+    read_timeout: 3
+
+  # Set queue_driver to "memory" for in-process queue, or "sqs" for AWS SQS
+  queue:
+    driver: "memory"
+    workers: 2
+    queues:
+      task_events:
+        name: "task_events"
+        enabled: true
