@@ -1,0 +1,22 @@
+-- Schema of record for this service.
+--
+-- This project does NOT use GORM auto-migration. Every table is defined here as
+-- explicit DDL and applied out of band (see `make db-schema`, or your migration
+-- process in real environments).
+--
+-- Conventions:
+--   * Primary keys are BIGSERIAL (Postgres auto-increment), mapped to int64 in Go.
+--   * Name unique constraints explicitly (e.g. uq_<table>_<col>) so the
+--     repository can map a violation to a specific domain error.
+--   * Timestamps default to now() and are set by the database.
+--
+-- Add a CREATE TABLE per model below as you build each domain. Example:
+--
+-- CREATE TABLE IF NOT EXISTS users (
+--     id         BIGSERIAL PRIMARY KEY,
+--     email      VARCHAR(255) NOT NULL,
+--     name       VARCHAR(255) NOT NULL,
+--     created_at TIMESTAMPTZ  NOT NULL DEFAULT now(),
+--     updated_at TIMESTAMPTZ  NOT NULL DEFAULT now(),
+--     CONSTRAINT uq_users_email UNIQUE (email)
+-- );

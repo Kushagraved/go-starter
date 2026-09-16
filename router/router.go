@@ -1,25 +1,29 @@
+// Package router maps URLs to controller methods. Give each domain its own
+// <domain>_routes.go file and register it from Init.
 package router
 
 import (
 	"go-starter/internal/controller"
-	"go-starter/internal/middleware"
 	"go-starter/internal/logger"
+	"go-starter/internal/middleware"
 
 	"github.com/gin-gonic/gin"
 )
 
-func Init(srv *controller.Server, log logger.Logger) *gin.Engine {
-	r := gin.New()
-	r.Use(gin.Recovery())
-	r.Use(middleware.RequestID())
-	r.Use(middleware.RequestLogger(log))
+// Init builds the HTTP handler.
+//
+// NOTE: no authentication is applied here. Add an auth middleware to the v1 group
+// before exposing this service to untrusted traffic.
+func Init(srv *controller.Server, loggerObj logger.Logger) *gin.Engine {
+	engine := gin.New()
+	engine.Use(gin.Recovery())
+	engine.Use(middleware.RequestID())
+	engine.Use(middleware.RequestLogger(loggerObj))
 
-	r.GET("/health", func(ctx *gin.Context) {
-		ctx.JSON(200, gin.H{"status": "ok"})
-	})
+	engine.GET("/health", srv.Health)
 
-	v1 := r.Group("/v1")
-	registerTaskRoutes(v1, srv)
+	v1 := engine.Group("/v1")
+	_ = v1 // register domain routes on this group, e.g. registerUserRoutes(v1, srv)
 
-	return r
+	return engine
 }

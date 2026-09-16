@@ -1,36 +1,68 @@
 settings:
   env: "dev"
+
   server:
     port: "8080"
+    read_timeout: "15s"
+    write_timeout: "15s"
+    shutdown_timeout: "10s"
 
   logger:
     level: "debug"
 
-  # Set db_driver to "memory" for in-memory SQLite-like store, or "postgres" for real Postgres
-  db_driver: "memory"
-
   sql:
+    # Schema is managed with explicit DDL (scripts/db/schema.sql), not auto-migration.
     primary:
-      host: "postgres"
+      host: "localhost"
       port: 5432
       db_name: "go_starter"
       user: "postgres"
       password: "postgres"
+      ssl_mode: "disable"
       max_open_connections: 10
       max_idle_connections: 5
+      conn_max_lifetime: "30m"
 
   redis:
-    host: "redis:6379"
+    host: "localhost:6379"
     password: ""
-    db: 0
-    dial_timeout: 5
-    read_timeout: 3
+    dial_timeout: "5s"
+    read_timeout: "3s"
 
-  # Set queue_driver to "memory" for in-process queue, or "sqs" for AWS SQS
-  queue:
-    driver: "memory"
+  aws:
+    region: "us-east-1"
+    # LocalStack. Leave empty in real environments so the SDK resolves real
+    # endpoints and uses the default credential chain.
+    endpoint: "http://localhost:4566"
+    access_key_id: "test"
+    secret_access_key: "test"
+
+  storage:
+    bucket: "go-starter-local"
+
+  sqs:
+    # Master switch for all consumers.
+    enable: true
+    # Default worker-pool size when a queue does not set its own.
     workers: 2
-    queues:
-      task_events:
-        name: "task_events"
-        enabled: true
+    # false => a message is deleted only after it is processed successfully.
+    auto_commit: false
+
+    # One block per queue, matching a named field on config.SQSCfg. The queue must
+    # also be created in scripts/localstack/init-aws.sh so it exists locally.
+    #
+    # Sample queue, created in LocalStack and ready to use. Copy this block for
+    # real queues, and set enable: true once a consumer is registered for it in
+    # startConsumers.
+    test_events:
+      enable: false
+      queue_name: "test-events"
+      workers: 2
+      # Messages fetched per poll (SQS max is 10).
+      max_messages: 10
+      # Seconds a message stays hidden while being processed.
+      visibility_timeout: 30
+      # Long-poll duration; 20 is the SQS max and avoids busy polling.
+      wait_time_seconds: 20
+      # Widen the visibility timeout on each retry instead of hot-looping.
+      require_exp_backoff: true

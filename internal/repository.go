@@ -2,32 +2,47 @@ package internal
 
 import (
 	"context"
-	"go-starter/internal/models"
+	"time"
 )
 
-// Repository is the top-level interface composed of all domain DAOs + infrastructure concerns.
+// Repository is the single dependency a core service takes for state. It composes
+// data access with locking so a service holds one collaborator, not three.
 type Repository interface {
 	DAO
 	Lock
 }
 
-// Lock provides distributed locking.
+// Lock provides Redis-backed distributed locking.
 type Lock interface {
-	DistributedLock(ctx context.Context, key string, fn func() error) error
+	// DistributedLock runs execFunc while holding a cluster-wide lock on key.
+	// expiry of 0 uses the default (15 minutes).
+	// Returns constants.LockAlreadyHeld when the lock cannot be acquired.
+	DistributedLock(ctx context.Context, key string, expiry time.Duration, execFunc func() error) error
 }
 
-// DAO composes all domain-specific repository interfaces.
+// DAO composes every domain repository.
+//
+// Add one interface per domain and embed it here:
+//
+//	type DAO interface {
+//	    Atomic(ctx context.Context, fn func(store DAO) error) error
+//	    UserRepository
+//	    OrderRepository
+//	}
 type DAO interface {
-	// Atomic wraps fn in a DB transaction; the DAO passed to fn shares the transaction.
-	Atomic(ctx context.Context, fn func(store DAO) error) error
-	TaskRepository
-}
+	/*
+		Atomic runs fn inside one database transaction. The DAO handed to fn is
+		scoped to that transaction, so every call through it participates:
 
-// TaskRepository is the data-access contract for the Task domain.
-type TaskRepository interface {
-	CreateTask(ctx context.Context, task models.Task) (models.Task, error)
-	GetTaskByID(ctx context.Context, id string) (models.Task, error)
-	ListTasks(ctx context.Context, filters []models.RepoFilter) ([]models.Task, error)
-	UpdateTask(ctx context.Context, task models.Task) (models.Task, error)
-	DeleteTask(ctx context.Context, id string) error
+			err := repo.Atomic(ctx, func(store internal.DAO) error {
+				if err := store.CreateOrder(ctx, order); err != nil {
+					return err
+				}
+				return store.DebitWallet(ctx, userID, order.Amount)
+			})
+
+		Returning an error rolls back. A panic inside fn also rolls back and is
+		converted into an error.
+	*/
+	Atomic(ctx context.Context, fn func(store DAO) error) error
 }

@@ -1,6 +1,7 @@
-FROM golang:1.18-alpine
+# Production image: build the binary, then ship it on a minimal base.
+FROM golang:1.26-alpine AS builder
 
-RUN apk add --no-cache bash make git gcc musl-dev
+RUN apk add --no-cache git make
 
 WORKDIR /app
 
@@ -9,8 +10,21 @@ RUN go mod download
 
 COPY . .
 
-RUN make build
+RUN CGO_ENABLED=0 GOOS=linux go build -trimpath -ldflags="-s -w" -o ./bin/server ./cmd/server
+
+FROM alpine:3.22
+
+RUN apk add --no-cache ca-certificates tzdata \
+    && adduser -D -u 10001 appuser
+
+WORKDIR /app
+
+COPY --from=builder /app/bin/server ./bin/server
+COPY --from=builder /app/config ./config
+
+USER appuser
 
 EXPOSE 8080
 
-CMD ["./bin/server", "-config-path", "config/dev/config.yaml"]
+ENTRYPOINT ["./bin/server"]
+CMD ["-config-path", "config/dev/config.yaml"]

@@ -1,0 +1,16 @@
+# Build output
+/bin/
+# `go build ./cmd/server` drops the binary in the working directory
+/server
+
+# Local env overrides
+.env
+.env.*
+
+# OS / editor cruft
+.DS_Store
+*.swp
+
+# Test and coverage output
+*.out
+/coverage/
