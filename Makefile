@@ -64,5 +64,6 @@ mocks:
 	mockgen -source=internal/infrastructure/cache.go        -destination=internal/infrastructure/cache_mock.go        -package=infrastructure
 	mockgen -source=internal/infrastructure/file_storage.go -destination=internal/infrastructure/file_storage_mock.go -package=infrastructure
 	mockgen -source=internal/infrastructure/events.go       -destination=internal/infrastructure/events_mock.go       -package=infrastructure
+	mockgen -source=internal/core/expensesharing/expensesharing.go -destination=internal/core/expensesharing/expensesharing_mock.go -package=expensesharing
 
 .PHONY: setup build clean fmt vet test infra infra-logs infra-stop infra-down db-schema run dev mocks

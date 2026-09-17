@@ -20,3 +20,36 @@
 --     updated_at TIMESTAMPTZ  NOT NULL DEFAULT now(),
 --     CONSTRAINT uq_users_email UNIQUE (email)
 -- );
+
+-- ── Expense sharing ─────────────────────────────────────────────────────────
+
+CREATE TABLE IF NOT EXISTS users (
+    id         BIGSERIAL PRIMARY KEY,
+    name       VARCHAR(255) NOT NULL,
+    email      VARCHAR(255) NOT NULL,
+    phone      VARCHAR(32)  NOT NULL,
+    created_at TIMESTAMPTZ  NOT NULL DEFAULT now(),
+    updated_at TIMESTAMPTZ  NOT NULL DEFAULT now(),
+    CONSTRAINT uq_users_email UNIQUE (email),
+    CONSTRAINT uq_users_phone UNIQUE (phone)
+);
+
+CREATE TABLE IF NOT EXISTS expenses (
+    id                 BIGSERIAL PRIMARY KEY,
+    created_by_user_id BIGINT       NOT NULL REFERENCES users(id),
+    name               VARCHAR(255) NOT NULL,
+    amount_paisa       BIGINT       NOT NULL CHECK (amount_paisa >= 0),
+    split_type         VARCHAR(16)  NOT NULL,
+    created_at         TIMESTAMPTZ  NOT NULL DEFAULT now()
+);
+
+CREATE TABLE IF NOT EXISTS expense_splits (
+    id          BIGSERIAL PRIMARY KEY,
+    expense_id  BIGINT NOT NULL REFERENCES expenses(id),
+    user_id     BIGINT NOT NULL REFERENCES users(id),
+    owed_paisa  BIGINT NOT NULL CHECK (owed_paisa >= 0),
+    paid_paisa  BIGINT NOT NULL CHECK (paid_paisa >= 0),
+    CONSTRAINT uq_expense_splits_expense_user UNIQUE (expense_id, user_id)
+);
+
+CREATE INDEX IF NOT EXISTS idx_expense_splits_user ON expense_splits(user_id);
