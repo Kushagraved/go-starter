@@ -22,6 +22,8 @@ import (
 
 	"go-starter/internal/config"
 	"go-starter/internal/controller"
+	"go-starter/internal/core/booking"
+	"go-starter/internal/core/onboarding"
 	"go-starter/internal/infrastructure"
 	"go-starter/internal/infrastructure/awsclient"
 	"go-starter/internal/infrastructure/filestorage"
@@ -84,10 +86,15 @@ func main() {
 	// ── Services ──────────────────────────────────────────────────────────────
 	// Construct core services here, then pass them to controller.Services and to
 	// startConsumers.
-	//   userService := user.NewService(repo, producer, fileStorage, appLogger)
-	_, _, _ = repo, fileStorage, producer
+	_, _ = fileStorage, producer
 
-	services := controller.Services{}
+	onboardingService := onboarding.NewService(repo, appLogger)
+	bookingService := booking.NewService(repo, appLogger)
+
+	services := controller.Services{
+		Onboarding: onboardingService,
+		Booking:    bookingService,
+	}
 
 	// ── Consumers ─────────────────────────────────────────────────────────────
 	startConsumers(rootCtx, settings, awsClients, appLogger, services)

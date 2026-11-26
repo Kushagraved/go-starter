@@ -6,6 +6,8 @@ import (
 	"net/http"
 
 	"go-starter/internal/constants"
+	"go-starter/internal/core/booking"
+	"go-starter/internal/core/onboarding"
 	"go-starter/internal/logger"
 
 	"github.com/gin-gonic/gin"
@@ -19,7 +21,10 @@ import (
 //	    User  user.Service
 //	    Order order.Service
 //	}
-type Services struct{}
+type Services struct {
+	Onboarding onboarding.Service
+	Booking    booking.Service
+}
 
 // Server holds the handlers. Give each domain its own file (user.go, order.go)
 // with methods on *Server.
@@ -43,8 +48,16 @@ func (s *Server) Health(ctx *gin.Context) {
 // Call this instead of writing status codes by hand in every handler.
 func (s *Server) RespondError(ctx *gin.Context, handler string, err error) {
 	switch {
+	case errors.Is(err, constants.ErrValidation):
+		ThrowError(ctx, http.StatusBadRequest, constants.ErrBadRequest, err.Error())
 	case errors.Is(err, constants.RecordDoesntExists):
 		ThrowError(ctx, http.StatusNotFound, constants.ErrNotFound, "resource not found")
+	case errors.Is(err, constants.PriceConfigNotFound):
+		ThrowError(ctx, http.StatusNotFound, constants.ErrNotFound, "price configuration not found")
+	case errors.Is(err, constants.NoCarAvailable):
+		ThrowError(ctx, http.StatusConflict, constants.ErrConflict, "no car available for the requested window")
+	case errors.Is(err, constants.BookingOverlap):
+		ThrowError(ctx, http.StatusConflict, constants.ErrConflict, "car was just taken, please retry")
 	case errors.Is(err, constants.LockAlreadyHeld):
 		ThrowError(ctx, http.StatusConflict, constants.ErrConflict, "resource is busy, retry shortly")
 	default:

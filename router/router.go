@@ -23,7 +23,8 @@ func Init(srv *controller.Server, loggerObj logger.Logger) *gin.Engine {
 	engine.GET("/health", srv.Health)
 
 	v1 := engine.Group("/v1")
-	_ = v1 // register domain routes on this group, e.g. registerUserRoutes(v1, srv)
+	registerOnboardingRoutes(v1, srv)
+	registerBookingRoutes(v1, srv)
 
 	return engine
 }
